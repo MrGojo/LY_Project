@@ -28,6 +28,7 @@ interface Slide {
   slideNumber: number;
   filename: string;
   imagePath: string;
+  processedImagePath?: string;
   hasHippocampus: boolean;
   coordinates: HippocampusCoordinates[];
   regionCount: number;
@@ -46,6 +47,7 @@ interface SingleImageData {
   success: boolean;
   filename: string;
   imagePath?: string;
+  processedImagePath?: string;
   segmentation: {
     filename: string;
     size: string;
@@ -137,11 +139,14 @@ const Results: React.FC = () => {
     const img = new Image();
     img.crossOrigin = 'anonymous';
     
-    if (singleData.imagePath) {
-      const imageUrl = singleData.imagePath.startsWith('/api/images') 
-        ? singleData.imagePath 
-        : `/api/images${singleData.imagePath}`;
-      img.src = imageUrl;
+    const primaryImagePath = singleData.processedImagePath || singleData.imagePath;
+    if (primaryImagePath) {
+      const normalizedPath = primaryImagePath.startsWith('/api/')
+        ? primaryImagePath
+        : primaryImagePath.startsWith('/')
+          ? primaryImagePath
+          : `/${primaryImagePath}`;
+      img.src = normalizedPath;
     } else {
       img.src = 'data:image/svg+xml;base64,' + btoa(`
         <svg width="256" height="256" xmlns="http://www.w3.org/2000/svg">
@@ -202,11 +207,14 @@ const Results: React.FC = () => {
     const img = new Image();
     img.crossOrigin = 'anonymous';
     
-    if (slide.imagePath) {
-      const imageUrl = slide.imagePath.startsWith('/api/images') 
-        ? slide.imagePath 
-        : `/api/images${slide.imagePath}`;
-      img.src = imageUrl;
+    const primaryImagePath = slide.processedImagePath || slide.imagePath;
+    if (primaryImagePath) {
+      const normalizedPath = primaryImagePath.startsWith('/api/')
+        ? primaryImagePath
+        : primaryImagePath.startsWith('/')
+          ? primaryImagePath
+          : `/${primaryImagePath}`;
+      img.src = normalizedPath;
     } else {
       img.src = 'data:image/svg+xml;base64,' + btoa(`
         <svg width="256" height="256" xmlns="http://www.w3.org/2000/svg">

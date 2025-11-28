@@ -12,6 +12,7 @@ const PORT = process.env.PORT || 5000;
 const DATASET_PATH = path.join(__dirname, 'Nanavati_model (1)', 'images');
 const TEST_JSON_PATH = path.join(__dirname, 'Nanavati_model (1)', 'test.json');
 const TRAIN_JSON_PATH = path.join(__dirname, 'Nanavati_model (1)', 'train.json');
+const RESULTS_TEST_PATH = path.join(__dirname, 'results', 'content', 'data', 'images', 'test');
 
 // Middleware
 app.use(cors());
@@ -20,8 +21,9 @@ app.use(express.json());
 // Serve static files from client build
 app.use(express.static(path.join(__dirname, 'client', 'build')));
 
-// Serve dataset images
+// Serve dataset images and processed results
 app.use('/api/images', express.static(DATASET_PATH));
+app.use('/api/results/test', express.static(RESULTS_TEST_PATH));
 
 // Configure multer for file uploads
 const storage = multer.memoryStorage();
@@ -203,6 +205,19 @@ function extractCoordinates(segmentationData) {
   }).filter(coord => coord !== null);
 }
 
+// Get processed image path (if available)
+function getProcessedImagePath(filename) {
+  if (!filename) {
+    return null;
+  }
+
+  const processedPath = path.join(RESULTS_TEST_PATH, filename);
+  if (fs.existsSync(processedPath)) {
+    return `/api/results/test/${filename}`;
+  }
+  return null;
+}
+
 // API Routes
 // Single file upload (backward compatibility)
 app.post('/api/upload', upload.single('image'), async (req, res) => {
@@ -251,12 +266,14 @@ app.post('/api/upload', upload.single('image'), async (req, res) => {
     // Extract coordinates
     const coordinates = extractCoordinates(segmentationData);
     const parsed = parseFilename(matchedImage);
+    const processedImagePath = getProcessedImagePath(matchedImage);
     
     // Return success with segmentation data and image path
     res.json({
       success: true,
       filename: matchedImage,
       imagePath: imagePath,
+      processedImagePath,
       segmentation: segmentationData,
       coordinates: coordinates,
       patientId: parsed ? parsed.patientId : null,
@@ -333,10 +350,12 @@ app.post('/api/upload-folder', upload.array('images', 300), async (req, res) => 
       // Extract coordinates
       const coordinates = extractCoordinates(segmentationData);
       const hasHippocampus = coordinates.length > 0;
+      const processedImagePath = getProcessedImagePath(matchedImage);
       
       processedImages.push({
         filename: matchedImage,
         imagePath: imagePath,
+        processedImagePath,
         patientId: parsed.patientId,
         slideNumber: parsed.slideNumber,
         segmentation: segmentationData,
@@ -392,6 +411,7 @@ app.post('/api/upload-folder', upload.array('images', 300), async (req, res) => 
         slideNumber: img.slideNumber,
         filename: img.filename,
         imagePath: img.imagePath,
+        processedImagePath: img.processedImagePath,
         hasHippocampus: img.hasHippocampus,
         coordinates: img.coordinates,
         regionCount: img.coordinates.length

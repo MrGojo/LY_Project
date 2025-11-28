@@ -77,6 +77,82 @@ interface FolderData {
   patients: Patient[];
 }
 
+const resolveImagePath = (path?: string) => {
+  if (!path) return null;
+  if (path.startsWith('http://') || path.startsWith('https://')) {
+    return path;
+  }
+  if (path.startsWith('/')) {
+    return path;
+  }
+  return `/${path}`;
+};
+
+interface SlidePlaybackProps {
+  patientId: number;
+  slides: Slide[];
+}
+
+const SlidePlayback: React.FC<SlidePlaybackProps> = ({ patientId, slides }) => {
+  const playableSlides = slides.filter(slide => slide.processedImagePath || slide.imagePath);
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [isPlaying, setIsPlaying] = useState(true);
+
+  useEffect(() => {
+    setCurrentIndex(0);
+  }, [patientId, playableSlides.length]);
+
+  useEffect(() => {
+    if (!isPlaying || playableSlides.length === 0) return;
+    const interval = setInterval(() => {
+      setCurrentIndex(prev => (prev + 1) % playableSlides.length);
+    }, 120);
+
+    return () => clearInterval(interval);
+  }, [isPlaying, playableSlides.length]);
+
+  if (playableSlides.length === 0) {
+    return (
+      <div className="playback-section disabled">
+        <div className="playback-header">
+          <h4>Fast-Forward Preview</h4>
+        </div>
+        <p>No processed slides available for playback.</p>
+      </div>
+    );
+  }
+
+  const currentSlide = playableSlides[currentIndex];
+  const imageSrc = resolveImagePath(currentSlide.processedImagePath || currentSlide.imagePath);
+
+  return (
+    <div className="playback-section">
+      <div className="playback-header">
+        <h4>Fast-Forward Preview</h4>
+        <div className="playback-controls">
+          <button
+            type="button"
+            className="playback-btn"
+            onClick={() => setIsPlaying(prev => !prev)}
+          >
+            {isPlaying ? 'Pause' : 'Play'}
+          </button>
+          <span className="playback-status">
+            Slide {currentSlide.slideNumber} / {playableSlides.length}
+          </span>
+        </div>
+      </div>
+      <div className="playback-frame">
+        {imageSrc ? (
+          <img src={imageSrc} alt={`Patient ${patientId} fast-forward preview`} />
+        ) : (
+          <div className="playback-placeholder">Image unavailable</div>
+        )}
+      </div>
+    </div>
+  );
+};
+
 const Results: React.FC = () => {
   const [singleData, setSingleData] = useState<SingleImageData | null>(null);
   const [folderData, setFolderData] = useState<FolderData | null>(null);
@@ -139,14 +215,9 @@ const Results: React.FC = () => {
     const img = new Image();
     img.crossOrigin = 'anonymous';
     
-    const primaryImagePath = singleData.processedImagePath || singleData.imagePath;
+    const primaryImagePath = resolveImagePath(singleData.processedImagePath || singleData.imagePath);
     if (primaryImagePath) {
-      const normalizedPath = primaryImagePath.startsWith('/api/')
-        ? primaryImagePath
-        : primaryImagePath.startsWith('/')
-          ? primaryImagePath
-          : `/${primaryImagePath}`;
-      img.src = normalizedPath;
+      img.src = primaryImagePath;
     } else {
       img.src = 'data:image/svg+xml;base64,' + btoa(`
         <svg width="256" height="256" xmlns="http://www.w3.org/2000/svg">
@@ -207,14 +278,9 @@ const Results: React.FC = () => {
     const img = new Image();
     img.crossOrigin = 'anonymous';
     
-    const primaryImagePath = slide.processedImagePath || slide.imagePath;
+    const primaryImagePath = resolveImagePath(slide.processedImagePath || slide.imagePath);
     if (primaryImagePath) {
-      const normalizedPath = primaryImagePath.startsWith('/api/')
-        ? primaryImagePath
-        : primaryImagePath.startsWith('/')
-          ? primaryImagePath
-          : `/${primaryImagePath}`;
-      img.src = normalizedPath;
+      img.src = primaryImagePath;
     } else {
       img.src = 'data:image/svg+xml;base64,' + btoa(`
         <svg width="256" height="256" xmlns="http://www.w3.org/2000/svg">
@@ -324,6 +390,8 @@ const Results: React.FC = () => {
                     )}
                   </div>
                 </div>
+
+                <SlidePlayback patientId={patient.patientId} slides={patient.slides} />
 
                 <div className="results-content folder-results">
                   <div className="visualization-section">

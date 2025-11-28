@@ -3,6 +3,16 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import './Upload.css';
 
+const MAX_SLIDES = 400;
+
+const limitFiles = (selectedFiles: File[], setError: (message: string | null) => void) => {
+  if (selectedFiles.length > MAX_SLIDES) {
+    setError(`You selected ${selectedFiles.length} slides. Only the first ${MAX_SLIDES} will be processed.`);
+    return selectedFiles.slice(0, MAX_SLIDES);
+  }
+  return selectedFiles;
+};
+
 const Upload: React.FC = () => {
   const [file, setFile] = useState<File | null>(null);
   const [files, setFiles] = useState<File[]>([]);
@@ -32,8 +42,11 @@ const Upload: React.FC = () => {
   const handleFolderChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFiles = Array.from(e.target.files || []);
     if (selectedFiles.length > 0) {
-      setFiles(selectedFiles);
-      setError(null);
+      const limitedFiles = limitFiles(selectedFiles, setError);
+      if (selectedFiles.length <= MAX_SLIDES) {
+        setError(null);
+      }
+      setFiles(limitedFiles);
       setPreview(null);
     }
   };
@@ -55,8 +68,11 @@ const Upload: React.FC = () => {
     } else {
       const droppedFiles = Array.from(e.dataTransfer.files);
       if (droppedFiles.length > 0) {
-        setFiles(droppedFiles);
-        setError(null);
+        const limitedFiles = limitFiles(droppedFiles, setError);
+        if (droppedFiles.length <= MAX_SLIDES) {
+          setError(null);
+        }
+        setFiles(limitedFiles);
         setPreview(null);
       }
     }
@@ -72,6 +88,11 @@ const Upload: React.FC = () => {
     if (uploadMode === 'single') {
       if (!file) {
         setError('Please select a file first');
+        return;
+      }
+
+      if (files.length > MAX_SLIDES) {
+        setError(`Please upload at most ${MAX_SLIDES} slides at once.`);
         return;
       }
 
@@ -173,7 +194,7 @@ const Upload: React.FC = () => {
         <div className="upload-card">
           <h2>Upload Brain Scan</h2>
           <p className="upload-subtitle">
-            Upload a single image or an entire patient folder (up to 300 slides)
+            Upload a single image or an entire patient folder (up to {MAX_SLIDES} slides)
           </p>
 
           {/* Upload Mode Toggle */}
@@ -303,7 +324,7 @@ const Upload: React.FC = () => {
                       Drag and drop patient folder files here, or click to browse
                     </p>
                     <p className="drop-zone-hint">
-                      Select multiple files (up to 300 slides) from a patient folder
+                      Select multiple files (up to {MAX_SLIDES} slides) from a patient folder
                     </p>
                     <input
                       ref={folderInputRef}

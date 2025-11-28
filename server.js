@@ -27,9 +27,11 @@ app.use('/api/results/test', express.static(RESULTS_TEST_PATH));
 
 // Configure multer for file uploads
 const storage = multer.memoryStorage();
+const MAX_SLIDES = 400;
+
 const upload = multer({ 
   storage: storage,
-  limits: { fileSize: 50 * 1024 * 1024, files: 300 }, // 50MB per file, max 300 files
+  limits: { fileSize: 50 * 1024 * 1024, files: MAX_SLIDES }, // 50MB per file, max 400 files
   fileFilter: (req, file, cb) => {
     const allowedTypes = /jpeg|jpg|png|dcm|nii|nii\.gz/;
     const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
@@ -291,7 +293,7 @@ app.post('/api/upload', upload.single('image'), async (req, res) => {
 });
 
 // Multiple file upload (patient folder)
-app.post('/api/upload-folder', upload.array('images', 300), async (req, res) => {
+app.post('/api/upload-folder', upload.array('images', MAX_SLIDES), async (req, res) => {
   try {
     if (!req.files || req.files.length === 0) {
       return res.status(400).json({ error: 'No files uploaded' });

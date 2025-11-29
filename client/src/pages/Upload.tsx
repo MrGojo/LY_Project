@@ -181,7 +181,7 @@ const Upload: React.FC = () => {
         <div className="logo-section">
           <div className="logo-icon">🧠</div>
           <div className="logo-text">
-            <h1>HippoCare AI</h1>
+            <h1>Dr.Onco</h1>
             <p>Precision Radiotherapy</p>
           </div>
         </div>
